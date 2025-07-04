@@ -1,0 +1,59 @@
+import java.util.*;
+import org.json.JSONObject;
+
+public class NestedJsonBuilder {
+    public static void main(String[] args) {
+        List<String> items = Arrays.asList(
+            "perm_loan_conventional",
+            "perm_ui_performauditassign",
+            "perm_loan_employeeloan",
+            "auditlevel_qc",
+            "perm_queue_inprogress",
+            "perm_ui_performaudit",
+            "channel_wealth",
+            "perm_queue_available",
+            "perm_loan_fha",
+            "auditlevel_upr",
+            "perm_loan_va",
+            "channel_he",
+            "channel_retail",
+            "auditlevel_qa",
+            "role_auditor"
+        );
+
+        Map<String, Object> result = new LinkedHashMap<>();
+
+        for (String item : items) {
+            String[] parts = item.split("_");
+
+            if (parts.length == 2) {
+                // Example: auditlevel_qc → top: auditlevel, value: qc
+                result.computeIfAbsent(parts[0], k -> new LinkedHashSet<String>());
+                ((Set<String>) result.get(parts[0])).add(parts[1]);
+            } else if (parts.length == 3) {
+                // Example: perm_loan_conventional → top: perm, mid: loan, value: conventional
+                Map<String, Set<String>> nestedMap = (Map<String, Set<String>>) result.computeIfAbsent(parts[0], k -> new LinkedHashMap<>());
+                nestedMap.computeIfAbsent(parts[1], k -> new LinkedHashSet<>()).add(parts[2]);
+            }
+        }
+
+        // Convert all Sets to Lists for JSON compatibility
+        Map<String, Object> finalJsonMap = new LinkedHashMap<>();
+        for (Map.Entry<String, Object> entry : result.entrySet()) {
+            if (entry.getValue() instanceof Set) {
+                finalJsonMap.put(entry.getKey(), new ArrayList<>((Set<String>) entry.getValue()));
+            } else if (entry.getValue() instanceof Map) {
+                Map<String, List<String>> nestedListMap = new LinkedHashMap<>();
+                Map<String, Set<String>> nestedSetMap = (Map<String, Set<String>>) entry.getValue();
+                for (Map.Entry<String, Set<String>> nestedEntry : nestedSetMap.entrySet()) {
+                    nestedListMap.put(nestedEntry.getKey(), new ArrayList<>(nestedEntry.getValue()));
+                }
+                finalJsonMap.put(entry.getKey(), nestedListMap);
+            }
+        }
+
+        // Output final JSON
+        JSONObject json = new JSONObject(finalJsonMap);
+        System.out.println(json.toString(4));
+    }
+}
